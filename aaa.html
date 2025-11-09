@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>网页烟花秀</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<canvas id="fireworks"></canvas>
+
+<script>
+// 烟花核心逻辑（无需修改）
+const canvas = document.getElementById('fireworks');
+const ctx = canvas.getContext('2d');
+let fireworks = [];
+let particles = [];
+
+// 适配屏幕大小
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// 烟花类
+class Firework {
+    constructor() {
+        this.x = canvas.width / 2;
+        this.y = canvas.height;
+        this.targetX = Math.random() * canvas.width;
+        this.targetY = Math.random() * canvas.height * 0.6;
+        this.speed = 5;
+        this.angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
+        this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+        this.exploded = false;
+    }
+
+    update() {
+        if (!this.exploded) {
+            this.x += Math.cos(this.angle) * this.speed;
+            this.y += Math.sin(this.angle) * this.speed;
+            // 到达目标位置爆炸
+            const dist = Math.hypot(this.targetX - this.x, this.targetY - this.y);
+            if (dist < 10) {
+                this.explode();
+                this.exploded = true;
+            }
+        }
+    }
+
+    explode() {
+        // 生成爆炸粒子
+        for (let i = 0; i < 100; i++) {
+            particles.push(new Particle(this.x, this.y, this.color));
+        }
+    }
+
+    draw() {
+        if (!this.exploded) {
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.x - Math.cos(this.angle) * 10, this.y - Math.sin(this.angle) * 10);
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+    }
+}
+
+// 粒子类
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.speed = Math.random() * 4 + 1;
+        this.angle = Math.random() * Math.PI * 2;
+        this.color = color;
+        this.alpha = 1;
+        this.decay = 0.02;
+    }
+
+    update() {
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed;
+        this.alpha -= this.decay;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// 每隔1.5秒发射一个烟花
+setInterval(() => {
+    fireworks.push(new Firework());
+}, 1500);
+
+// 动画循环
+function animate() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 更新并绘制烟花
+    fireworks = fireworks.filter(firework => !firework.exploded || particles.length > 0);
+    fireworks.forEach(firework => {
+        firework.update();
+        firework.draw();
+    });
+
+    // 更新并绘制粒子
+    particles = particles.filter(particle => particle.alpha > 0);
+    particles.forEach(particle => {
+        particle.update();
+        particle.draw();
+    });
+
+    requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>
